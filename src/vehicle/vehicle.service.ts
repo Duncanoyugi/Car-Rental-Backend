@@ -76,6 +76,10 @@ export class VehicleService {
     const vehicle = await this.prisma.vehicle.create({
       data: {
         ...dto,
+        // Prisma DateTime requires full ISO-8601 timestamp.
+        // Frontend sends YYYY-MM-DD from <input type="date"/>, so coerce to Date.
+        availableFrom: new Date(dto.availableFrom),
+        availableTo: new Date(dto.availableTo),
         imageUrls,
         createdBy,
       },
@@ -149,6 +153,14 @@ export class VehicleService {
     return vehicles.map((v) => this.mapToInterface(v));
   }
 
+  async getById(id: string): Promise<Vehicle> {
+    const vehicle = await this.prisma.vehicle.findUnique({ where: { id } });
+    if (!vehicle) {
+      throw new NotFoundException('Vehicle not found');
+    }
+    return this.mapToInterface(vehicle);
+  }
+
   // Agent-specific vehicle creation (without files - can add images via update)
   async createVehicle(dto: CreateVehicleDto, agentId: string) {
     // Since this method doesn't handle file uploads, we simply create vehicle without images
@@ -211,22 +223,72 @@ export class VehicleService {
   }): Promise<PrismaVehicle[]> {
     const { location, category, from, to, q } = filters;
 
-    const fromDate = from ? new Date(from) : new Date();
-    const toDate = to ? new Date(to) : new Date();
+    // Treat missing dates as "available on today" (not "from now") to avoid
+    // timezone/time-of-day edge cases with YYYY-MM-DD inputs.
+    const today = new Date();
+    const startOfToday = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+      0,
+      0,
+      0,
+      0,
+    );
+    const endOfToday = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+      23,
+      59,
+      59,
+      999,
+    );
+
+    const fromDate = from ? new Date(from) : startOfToday;
+    const toDate = to ? new Date(to) : endOfToday;
+
+    const baseFilter: any = {
+      ...(location && {
+        location: { contains: location, mode: 'insensitive' },
+      }),
+      ...(category && {
+        category: { equals: category, mode: 'insensitive' },
+      }),
+      ...(q && {
+        title: { contains: q, mode: 'insensitive' },
+      }),
+    };
+
+    if (!from && !to) {
+      // Browsing without explicit dates should show all vehicles
+      // that have not yet expired (future or current availability).
+      return this.prisma.vehicle.findMany({
+        where: {
+          ...baseFilter,
+          availableTo: { gte: startOfToday },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
+
+    // If availableTo is earlier than availableFrom (bad data), swap the range
+    // so customers don't get an empty list.
+    const safeFrom = fromDate <= toDate ? fromDate : toDate;
+    const safeTo = fromDate <= toDate ? toDate : fromDate;
 
     return this.prisma.vehicle.findMany({
       where: {
-        ...(location && {
-          location: { contains: location, mode: 'insensitive' },
-        }),
-        ...(category && {
-          category: { equals: category, mode: 'insensitive' },
-        }),
-        ...(q && {
-          title: { contains: q, mode: 'insensitive' },
-        }),
-        availableFrom: { lte: fromDate },
-        availableTo: { gte: toDate },
+        ...baseFilter,
+        // Visible if it overlaps requested date range.
+        AND: [
+          {
+            availableFrom: { lte: safeTo },
+          },
+          {
+            availableTo: { gte: safeFrom },
+          },
+        ],
       },
       orderBy: { createdAt: 'desc' },
     });

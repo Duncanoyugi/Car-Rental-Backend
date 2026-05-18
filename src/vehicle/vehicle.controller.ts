@@ -11,7 +11,9 @@ import {
   Query,
   UseInterceptors,
   UploadedFiles,
+  BadRequestException,
 } from '@nestjs/common';
+
 import { VehicleService } from './vehicle.service';
 import { CreateVehicleDto } from './dtos/create-vehicle.dto';
 import { UpdateVehicleDto } from './dtos/update-vehicle.dto';
@@ -20,7 +22,7 @@ import { Roles } from 'src/auth/decorators/roles.decorator';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Vehicle } from 'src/interfaces/vehicle.interface';
 import { Role } from '../../generated/prisma';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('vehicles')
@@ -29,22 +31,22 @@ export class VehicleController {
 
   @Post()
   @Roles(Role.ADMIN, Role.AGENT)
-  @UseInterceptors(FileInterceptor('images', {
-    limits: { files: 10, fileSize: 8 * 1024 * 1024 },
-    fileFilter: (req, file, cb) => {
-      if (file.mimetype.startsWith('image/')) cb(null, true);
-      else cb(new Error('Only image files allowed'), false);
-    }
-  }))
+  // IMPORTANT: frontend uploads multiple files with the same field name "images"
+  // so we must use FilesInterceptor (not FileInterceptor)
+  @UseInterceptors(
+    FilesInterceptor('images', 10, {
+      limits: { fileSize: 8 * 1024 * 1024 },
+      fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) cb(null, true);
+        else cb(new Error('Only image files allowed'), false);
+      },
+    }),
+  )
   async create(
     @Request() req,
-    @Body() _dto: CreateVehicleDto,
-    @UploadedFiles() files?: Express.Multer.File[],
+    @Body() body: any,
+    @UploadedFiles() files?: any[],
   ): Promise<Vehicle> {
-    // multipart/form-data parsing + validation can be inconsistent for arrays/numbers,
-    // so build a DTO-compatible plain object from req.body.
-    const body: any = req.body ?? {};
-
     const featuresRaw = body.features ?? body['features[]'] ?? body.featuresInput;
     const features: string[] = Array.isArray(featuresRaw)
       ? featuresRaw.map(String)
@@ -52,9 +54,16 @@ export class VehicleController {
         ? [featuresRaw]
         : [];
 
-    const pricePerDay = typeof body.pricePerDay === 'string'
-      ? Number(body.pricePerDay)
-      : body.pricePerDay;
+    const pricePerDay =
+      typeof body.pricePerDay === 'string'
+        ? Number(body.pricePerDay)
+        : typeof body.pricePerDay === 'number'
+          ? body.pricePerDay
+          : Number(body.pricePerDay);
+
+    if (Number.isNaN(pricePerDay)) {
+      throw new BadRequestException('pricePerDay must be a number');
+    }
 
     const dto: CreateVehicleDto = {
       title: body.title,
@@ -72,33 +81,40 @@ export class VehicleController {
 
   @Put(':id')
   @Roles(Role.ADMIN, Role.AGENT)
-  @UseInterceptors(FileInterceptor('images', {
-    limits: { files: 10, fileSize: 8 * 1024 * 1024 },
-    fileFilter: (req, file, cb) => {
-      if (file.mimetype.startsWith('image/')) cb(null, true);
-      else cb(new Error('Only image files allowed'), false);
-    }
-  }))
+  @UseInterceptors(
+    FilesInterceptor('images', 10, {
+      limits: { fileSize: 8 * 1024 * 1024 },
+      fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) cb(null, true);
+        else cb(new Error('Only image files allowed'), false);
+      },
+    }),
+  )
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateVehicleDto,
-    @UploadedFiles() files?: Express.Multer.File[],
+    @UploadedFiles() files?: any[],
   ): Promise<Vehicle> {
-    return this.vehicleService.update(id, dto, files);
+    return this.vehicleService.update(id, dto, files as any);
   }
 
   @Post(':id/upload-images')
   @Roles(Role.ADMIN, Role.AGENT)
-  @UseInterceptors(FileInterceptor('images', {
-    limits: { files: 10, fileSize: 8 * 1024 * 1024 },
-    fileFilter: (req, file, cb) => {
-      if (file.mimetype.startsWith('image/')) cb(null, true);
-      else cb(new Error('Only image files allowed'), false);
-    }
-  }))
-  async uploadVehicleImages(@Param('id') id: string, @UploadedFiles() files: Express.Multer.File[]): Promise<{ urls: string[] }> {
+  @UseInterceptors(
+    FilesInterceptor('images', 10, {
+      limits: { fileSize: 8 * 1024 * 1024 },
+      fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) cb(null, true);
+        else cb(new Error('Only image files allowed'), false);
+      },
+    }),
+  )
+  async uploadVehicleImages(
+    @Param('id') id: string,
+    @UploadedFiles() files?: any[],
+  ): Promise<{ urls: string[] }> {
     const imageUrls: string[] = [];
-    for (const file of files) {
+    for (const file of files || []) {
       const result = await this.vehicleService.uploadImages(file);
       imageUrls.push(...result.urls);
     }
@@ -134,4 +150,17 @@ export class VehicleController {
   ) {
     return this.vehicleService.searchAvailableVehicles({ location, category, from, to, q });
   }
+
+  @Get('my')
+  @Roles(Role.AGENT)
+  getMyVehicles(@Request() req: any): Promise<any> {
+    return this.vehicleService.getMyVehicles(req.user.id);
+  }
+
+  @Get(':id')
+  @Roles(Role.ADMIN, Role.AGENT, Role.CUSTOMER)
+  getById(@Param('id') id: string): Promise<Vehicle> {
+    return this.vehicleService.getById(id);
+  }
 }
+
