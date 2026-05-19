@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreatePaymentDto } from './dtos/create-payment.dto';
@@ -18,6 +19,16 @@ export class PaymentService {
 
     if (!booking) throw new NotFoundException('Booking not found');
     if (booking.userId !== userId) throw new ForbiddenException('Unauthorized booking access');
+    if (booking.status !== 'PENDING') {
+      throw new BadRequestException('Only pending bookings can be paid');
+    }
+
+    const existingPayment = await this.prisma.payment.findUnique({
+      where: { bookingId: dto.bookingId },
+    });
+    if (existingPayment) {
+      throw new BadRequestException('This booking has already been paid');
+    }
 
     const payment = await this.prisma.payment.create({
       data: {
@@ -37,7 +48,7 @@ export class PaymentService {
 
     await this.prisma.booking.update({
       where: { id: dto.bookingId },
-      data: { status: 'COMPLETED' },
+      data: { status: 'CONFIRMED' },
     });
 
     return this.mapToIPayment(payment);

@@ -92,17 +92,25 @@ export class ReviewService {
 
   private mapToInterface(review: any): IReview {
     return {
-        id: review.id,
-        rating: review.rating,
-        comment: review.comment,
-        vehicleId: review.vehicleId,
-        userId: review.userId,
-        createdAt: review.createdAt.toISOString(),
-        user: {
+      id: review.id,
+      rating: review.rating,
+      comment: review.comment,
+      vehicleId: review.vehicleId,
+      userId: review.userId,
+      createdAt: review.createdAt.toISOString(),
+      user: review.user
+        ? {
             fullName: review.user.fullName,
             profileImage: review.user.profileImage,
-        },
+          }
+        : undefined,
+      vehicle: review.vehicle
+        ? {
+            id: review.vehicle.id,
+            title: review.vehicle.title,
+            category: review.vehicle.category,
+          }
+        : undefined,
     };
-
   }
 }

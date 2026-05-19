@@ -5,8 +5,13 @@ export interface IReview {
   vehicleId: string;
   userId: string;
   createdAt: string;
-  user: {
+  user?: {
     fullName: string;
     profileImage: string | null;
+  };
+  vehicle?: {
+    id: string;
+    title: string;
+    category: string;
   };
 }

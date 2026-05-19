@@ -7,4 +7,6 @@ export interface Booking {
   status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
   totalPrice: number | null;
   createdAt: string;
+  vehicle?: Record<string, unknown>;
+  user?: Record<string, unknown>;
 }

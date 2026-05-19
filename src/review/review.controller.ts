@@ -18,18 +18,25 @@ import { Roles } from 'src/auth/decorators/roles.decorator';
 import { Role } from '../../generated/prisma';
 import { RequestWithUser } from 'src/interfaces/request-with-user.interface';
 
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.CUSTOMER)
 @Controller('reviews')
 export class ReviewController {
   constructor(private readonly reviewService: ReviewService) {}
 
+  @Get('vehicle/:vehicleId')
+  getVehicleReviews(@Param('vehicleId') vehicleId: string) {
+    return this.reviewService.getVehicleReviews(vehicleId);
+  }
+
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.CUSTOMER)
   create(@Req() req: RequestWithUser, @Body() dto: CreateReviewDto) {
     return this.reviewService.createReview(req.user.id, dto);
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.CUSTOMER)
   update(
     @Param('id') reviewId: string,
     @Req() req: RequestWithUser,
@@ -39,17 +46,16 @@ export class ReviewController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.CUSTOMER)
   delete(@Param('id') reviewId: string, @Req() req: RequestWithUser) {
     return this.reviewService.deleteReview(req.user.id, reviewId);
   }
 
   @Get('my')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.CUSTOMER)
   getMyReviews(@Req() req: RequestWithUser) {
     return this.reviewService.getMyReviews(req.user.id);
-  }
-
-  @Get('vehicle/:vehicleId')
-  getVehicleReviews(@Param('vehicleId') vehicleId: string) {
-    return this.reviewService.getVehicleReviews(vehicleId);
   }
 }
