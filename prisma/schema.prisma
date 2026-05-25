@@ -74,14 +74,30 @@ model Review {
 }
 
 model Payment {
-  id        String   @id @default(uuid())
-  bookingId String   @unique
-  amount    Float
-  method    String
-  status    String   @default("PENDING")
-  createdAt DateTime @default(now())
-  booking   Booking  @relation("BookingPayment", fields: [bookingId], references: [id])
+  id                      String   @id @default(uuid())
+  bookingId              String   @unique
+
+  amount                 Float
+  currency               String   @default("KES")
+  method                 String
+  status                 String   @default("PENDING")
+
+  // Paystack fields
+  paystackReference      String   @unique
+  paystackAuthorizationUrl String?
+  paystackAccessCode     String?
+  paidAt                  DateTime?
+  channel                 String?
+  gatewayReference       String?
+  gatewayResponse        String?
+  refundAmount           Float?
+  refundedAt             DateTime?
+
+  createdAt               DateTime @default(now())
+
+  booking                 Booking  @relation("BookingPayment", fields: [bookingId], references: [id])
 }
+
 
 model Favorite {
   id        String   @id @default(uuid())
