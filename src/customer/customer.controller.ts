@@ -11,6 +11,7 @@ import { ChangePasswordDto } from './dtos/change-password.dto';
 import { UpdateCustomerProfileDto } from './dtos/update-profile.dto';
 import { CustomerService } from './customer.service';
 import { RequestWithUser } from 'src/interfaces/request-with-user.interface';
+import { MulterFile } from 'src/interfaces/multer-file.interface';
 
 
 @Controller('customer')
@@ -33,7 +34,7 @@ export class CustomerController {
 
   @Post('profile/photo')
   @UseInterceptors(FileInterceptor('file'))
-  async uploadPhoto(@UploadedFile() file: Express.Multer.File, @Req() req) {
+  async uploadPhoto(@UploadedFile() file: MulterFile, @Req() req) {
     return this.customerService.uploadProfileImage(req.user.sub, file);
   }
 

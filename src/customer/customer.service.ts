@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { UpdateCustomerProfileDto } from './dtos/update-profile.dto';
+import { MulterFile } from 'src/interfaces/multer-file.interface';
 import { ChangePasswordDto } from './dtos/change-password.dto';
 import { CloudinaryService, UploadType } from 'src/utils/cloudinary.service';
 
@@ -33,7 +34,7 @@ export class CustomerService {
     });
   }
 
-  async uploadProfileImage(customerId: string, file: Express.Multer.File) {
+  async uploadProfileImage(customerId: string, file: MulterFile) {
     if (!file) {
       throw new BadRequestException('No file provided');
     }

@@ -10,8 +10,9 @@ import { CloudinaryService, UploadType } from 'src/utils/cloudinary.service';
 import { RegisterDto } from './dtos/register.dto';
 import { LoginDto } from './dtos/login.dto';
 import { AuthResponse } from 'src/interfaces/auth.interface';
+import { MulterFile } from 'src/interfaces/multer-file.interface';
 import * as bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 import { ChangePasswordDto } from './dtos/change-password.dto';
 import { RequestResetDto } from './dtos/request-reset.dto';
 import { ConfirmResetDto } from './dtos/confirm-reset.dto';
@@ -25,7 +26,7 @@ export class AuthService {
     private readonly cloudinary: CloudinaryService,
   ) {}
 
-  async register(dto: RegisterDto, file?: Express.Multer.File): Promise<AuthResponse> {
+  async register(dto: RegisterDto, file?: MulterFile): Promise<AuthResponse> {
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });

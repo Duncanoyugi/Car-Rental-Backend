@@ -10,6 +10,7 @@ import { ConfirmResetDto } from './dtos/confirm-reset.dto';
 import { UseInterceptors, UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '@nestjs/passport';
+import { MulterFile } from 'src/interfaces/multer-file.interface';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 
@@ -22,7 +23,7 @@ export class AuthController {
 
   @Post('register')
   @UseInterceptors(FileInterceptor('profileImage'))
-  register(@UploadedFile() file: Express.Multer.File, @Body() body: any) {
+  register(@UploadedFile() file: MulterFile, @Body() body: any) {
     return this.authService.register(body, file);
   }
 

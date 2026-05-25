@@ -1,6 +1,7 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { v2 as cloudinary, UploadApiResponse, UploadApiOptions } from 'cloudinary';
+import { v2 as cloudinary, UploadApiOptions, UploadApiResponse } from 'cloudinary';
+import { MulterFile } from 'src/interfaces/multer-file.interface';
 
 export interface CloudinaryUploadResult {
   public_id: string;
@@ -79,7 +80,8 @@ export class CloudinaryService {
     return configs[uploadType];
   }
 
-  private validateFile(file: Express.Multer.File, config: UploadConfig): void {
+  private validateFile(file: MulterFile, config: UploadConfig): void {
+
     if (!file) {
       throw new BadRequestException('No file provided');
     }
@@ -109,7 +111,7 @@ export class CloudinaryService {
   }
 
   async uploadFile(
-    file: Express.Multer.File,
+    file: MulterFile,
     uploadType: UploadType,
     options: { entityId?: string | number; entityType?: string } = {},
   ): Promise<CloudinaryUploadResult> {
@@ -135,11 +137,16 @@ export class CloudinaryService {
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         uploadOptions,
-        (error: any, result: UploadApiResponse) => {
+        (error: any, result?: UploadApiResponse) => {
           if (error) {
             this.logger.error(`Upload failed: ${error.message}`);
             return reject(new BadRequestException(`Upload failed: ${error.message}`));
           }
+
+          if (!result) {
+            return reject(new BadRequestException('Upload failed: no result returned'));
+          }
+
           resolve({
             public_id: result.public_id,
             secure_url: result.secure_url,

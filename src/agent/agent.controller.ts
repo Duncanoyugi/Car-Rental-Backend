@@ -10,6 +10,7 @@ import {
   UploadedFile,
 } from '@nestjs/common';
 import { AgentService } from './agent.service';
+import { MulterFile } from 'src/interfaces/multer-file.interface';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
@@ -66,7 +67,7 @@ export class AgentController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.AGENT)
   async uploadPhoto(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: MulterFile,
     @Req() req: RequestWithUser,
   ) {
     return this.agentService.uploadProfileImage(req.user.id, file);

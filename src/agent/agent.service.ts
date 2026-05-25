@@ -5,6 +5,7 @@ import { UpdateAgentProfileDto } from './dtos/update-profile.dto';
 import { ChangePasswordDto } from './dtos/change-password.dto';
 import * as bcrypt from 'bcrypt';
 import { CloudinaryService, UploadType } from 'src/utils/cloudinary.service';
+import { MulterFile } from 'src/interfaces/multer-file.interface';
 
 @Injectable()
 export class AgentService {
@@ -118,7 +119,7 @@ export class AgentService {
     });
   }
 
-  async uploadProfileImage(agentId: string, file: Express.Multer.File) {
+  async uploadProfileImage(agentId: string, file: MulterFile) {
     const agent = await this.prisma.user.findUnique({ where: { id: agentId } });
     if (!agent) throw new NotFoundException('Agent not found');
 

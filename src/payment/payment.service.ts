@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreatePaymentDto } from './dtos/create-payment.dto';
 import { IPayment } from 'src/interfaces/payment.interface';
@@ -36,6 +37,7 @@ export class PaymentService {
         amount: dto.amount,
         method: dto.method,
         status: 'COMPLETED',
+        paystackReference: randomUUID(),
       },
       include: {
         booking: {

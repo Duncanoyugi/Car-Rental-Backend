@@ -7,6 +7,7 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateVehicleDto } from './dtos/create-vehicle.dto';
 import { UpdateVehicleDto } from './dtos/update-vehicle.dto';
+import { MulterFile } from 'src/interfaces/multer-file.interface';
 import { Vehicle } from 'src/interfaces/vehicle.interface';
 import { Vehicle as PrismaVehicle } from '../../generated/prisma';
 import { CloudinaryService, UploadType } from 'src/utils/cloudinary.service';
@@ -35,7 +36,7 @@ export class VehicleService {
     };
   }
 
-  async uploadImages(file: Express.Multer.File): Promise<{ urls: string[] }> {
+  async uploadImages(file: MulterFile): Promise<{ urls: string[] }> {
     if (!file) {
       throw new BadRequestException('No file provided');
     }
@@ -49,7 +50,7 @@ export class VehicleService {
   }
 
   // Admin or Agent create with optional files and optional existing imageUrls
-  async create(dto: CreateVehicleDto, createdBy: string, files?: Express.Multer.File[]): Promise<Vehicle> {
+  async create(dto: CreateVehicleDto, createdBy: string, files?: MulterFile[]): Promise<Vehicle> {
     const imageUrls: string[] = [...(dto.imageUrls || [])];
 
     if (files && files.length > 0) {
@@ -87,7 +88,7 @@ export class VehicleService {
     return this.mapToInterface(vehicle);
   }
 
-  async update(id: string, dto: UpdateVehicleDto, files?: Express.Multer.File[]): Promise<Vehicle> {
+  async update(id: string, dto: UpdateVehicleDto, files?: MulterFile[]): Promise<Vehicle> {
     const existing = await this.prisma.vehicle.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Vehicle not found');
 
